@@ -470,6 +470,9 @@ R function of the same name: `assay` (or `assays`), `rowRanges` and `colData`.
 We now will load the full count matrix corresponding to all samples
 and all data, which is provided in the *airway* package, and will
 continue the analysis with the full data object. 
+Note that the information about the donor of the cell line and the dexamethasone
+treatment are now the `donor` and `condition` columns of the column metadata.
+
 We can investigate this *SummarizedExperiment* object by looking at
 the matrices in the `assays` slot, the phenotypic data about the samples in
 `colData` slot, and the data about the genes in the `rowRanges` slot.
