@@ -276,15 +276,23 @@ salmon index --gencode -t gencode.v29.transcripts.fa.gz \
 ```
 
 The above Snakemake file can then be used to 
-[execute Snakemake](https://snakemake.readthedocs.io/en/stable/executable.html)
+[execute Snakemake](https://snakemake.readthedocs.io/en/stable/executing/cli.html)
 in various ways, including submitting multiple jobs to a compute
-cluster or in the cloud. The above Snakemake file was executed on a
+cluster or in the cloud. The above Snakemake file, modified to
+reflect actual paths of resources, was executed on a
 cluster with SLURM scheduling, with the following line in a separate
 job submitted to the cluster:
 
 ```
 snakemake -j 4 --latency-wait 30 --cluster "sbatch -N 1 -n 6"
 ```
+This assumes that the Snakemake directives are in a file named "Snakefile".
+Options used here include
+
+- `-j`: maximum number of jobs to be run in parallel
+- `--latency-wait`: number of seconds allowed for file to materialize to start next steps, in case there are delays
+- `--cluster`: [not present in readthedocs.io?]
+- The "-s" option can be used to run snakemake on a file with a specific name ("Snakefile" is the default)
 
 ## Reading in data with *tximeta*
 
