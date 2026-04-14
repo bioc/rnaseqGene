@@ -276,15 +276,23 @@ salmon index --gencode -t gencode.v29.transcripts.fa.gz \
 ```
 
 The above Snakemake file can then be used to 
-[execute Snakemake](https://snakemake.readthedocs.io/en/stable/executable.html)
+[execute Snakemake](https://snakemake.readthedocs.io/en/stable/executing/cli.html)
 in various ways, including submitting multiple jobs to a compute
-cluster or in the cloud. The above Snakemake file was executed on a
+cluster or in the cloud. The above Snakemake file, modified to
+reflect actual paths of resources, was executed on a
 cluster with SLURM scheduling, with the following line in a separate
 job submitted to the cluster:
 
 ```
 snakemake -j 4 --latency-wait 30 --cluster "sbatch -N 1 -n 6"
 ```
+This assumes that the Snakemake directives are in a file named "Snakefile".
+Options used here include
+
+- `-j`: maximum number of jobs to be run in parallel
+- `--latency-wait`: number of seconds allowed for file to materialize to start next steps, in case there are delays
+- `--cluster`: [not present in readthedocs.io?]
+- The "-s" option can be used to run snakemake on a file with a specific name ("Snakefile" is the default)
 
 ## Reading in data with *tximeta*
 
@@ -1956,6 +1964,130 @@ corner), but then have slight differences for the mutant strain
 
 <a id="ref"></a>
 
+# Appendix: Some operational details
+
+## Acquiring the airway FASTQ files
+
+The recommended methods for getting access to raw data for preprocessing and analysis
+change over time.  As of April 13, 2026, NCBI provides `fasterq-dump` for
+high-performance network operations that retrieve resources from the Sequence Read
+Archive.  The [SRA-tools wiki](https://github.com/ncbi/sra-tools/wiki/08.-prefetch-and-fasterq-dump)
+describes `prefetch` and `fasterq-dump`.  One approach to acquiring the airway experiment
+FASTQ files uses `fasterq-dump` directly.  The following commands
+produce gzipped FASTQ for one sample.
+
+```
+fasterq-dump -p -e 4 SRR1039509
+gzip SRR1039509_1.fastq
+gzip SRR1039509_2.fastq
+```
+
+Once this is carried out for the 8 airway experiment samples, approximately 22GB of
+compressed FASTQ will be present.
+
+## Building the transcript index for salmon
+
+We used 
+```
+salmon index -t gencode.v49.transcripts.fa.gz -i gencode.v49_salmon_1.11.4
+```
+after retrieving the compressed FASTA from [GENCODE](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.transcripts.fa.gz).
+
+The indexing process produces many messages.  Some examples:
+```
+[2026-04-13 06:23:04.280] [puff::index::jointLog] [warning] Entry with header [ENST00000631435.1|ENSG00000282253.1|OTTHUMG00000190586.2|OTTHUMT00000485282.2|TRBD1-201|TRBD1|12|TR_D_gene|], had length less than equal to the k-mer length of 31 (perhaps after poly-A clipping)
+
+[2026-04-13 06:23:04.314] [puff::index::jointLog] [warning] Removed 16702 transcripts that were sequence duplicates of indexed transcripts.
+[2026-04-13 06:23:04.314] [puff::index::jointLog] [warning] If you wish to retain duplicate transcripts, please use the `--keepDuplicates` flag
+[2026-04-13 06:23:04.320] [puff::index::jointLog] [info] Replaced 100014 non-ATCG nucleotides
+[2026-04-13 06:23:04.320] [puff::index::jointLog] [info] Clipped poly-A tails from 9880 transcripts
+wrote 516988 cleaned references
+[2026-04-13 06:23:05.600] [puff::index::jointLog] [info] Filter size not provided; estimating from number of distinct k-mers 
+[2026-04-13 06:23:12.270] [puff::index::jointLog] [info] ntHll estimated 185456630 distinct k-mers, setting filter size to 2^32
+```
+
+The resulting folder has contents:
+```
+gencode.v49_salmon_1.11.4
+├── complete_ref_lens.bin
+├── ctable.bin
+├── ctg_offsets.bin
+├── duplicate_clusters.tsv
+├── info.json
+├── pre_indexing.log
+├── ref_indexing.log
+├── refAccumLengths.bin
+├── reflengths.bin
+├── refseq.bin
+├── sshash.bin
+└── versionInfo.json
+```
+
+## Producing transcript quantifications
+
+The snakemake command was run with option `-j 4` on an M4 macbook air with
+32 GB RAM and completed in one hour.
+
+The folder produced for one sample has structure
+```
+quants
+├── SRR1039508
+│   ├── aux_info
+│   │   ├── ambig_info.tsv
+│   │   ├── bootstrap
+│   │   │   ├── bootstraps.gz
+│   │   │   └── names.tsv.gz
+│   │   ├── exp_gc.gz
+│   │   ├── expected_bias.gz
+│   │   ├── fld.gz
+│   │   ├── meta_info.json
+│   │   ├── obs_gc.gz
+│   │   ├── observed_bias_3p.gz
+│   │   └── observed_bias.gz
+│   ├── cmd_info.json
+│   ├── lib_format_counts.json
+│   ├── libParams
+│   │   └── flenDist.txt
+│   ├── logs
+│   │   └── salmon_quant.log
+│   └── quant.sf
+```
+The total disk space for quantifications for 8 samples was approximately 8 GB.
+
+## Producing a RangedSummarizedExperiment with tximeta
+
+With Gencode v49, `tximeta` applied to quantifications
+for the 8 samples produces messages including:
+```
+building TxDb with 'txdbmaker' package
+Import genomic features from the file as a GRanges object ... trying URL 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.annotation.gtf.gz'
+Content type 'unknown' length 93374019 bytes (89.0 MB)
+==================================================
+OK
+Prepare the 'metadata' data frame ... OK
+Make the TxDb object ... OK
+generating transcript ranges
+fetching genome info for GENCODE
+Warning messages:
+1: In .get_cds_IDX(mcols0$type, mcols0$phase) :
+  The "phase" metadata column contains non-NA values for features of type
+  stop_codon. This information was ignored.
+2: In .makeTxDb_normarg_chrominfo(chrominfo) :
+  genome version information is not available for this TxDb object
+3: In checkAssays2Txps(assays, txps) : 
+
+Warning: the annotation is missing some transcripts that were quantified.
+11097 out of 517038 txps were missing from GTF/GFF but were in the indexed FASTA
+(e.g. this can occur with transcripts located on haplotype chromosomes).
+In order to build a ranged SummarizedExperiment, these txps were removed.
+To keep these txps, and to skip adding ranges, use skipMeta=TRUE
+
+Example missing txps: [ENST00000707233.1, ENST00000710274.1, ENST00000707308.1, ...]
+```
+I note that the FTP query failed on first attempt with a 421 "service not
+available" error.  The second attempt, after a few minutes, succeeded.
+
+
 # Session information
 
 As the last part of this document, we call the function *sessionInfo*,
@@ -1976,4 +2108,5 @@ sessionInfo()
 ```
 
 # References
+
 
