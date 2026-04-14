@@ -1974,7 +1974,7 @@ RNA-seq reads to the human reference transcripts in GENCODE v29, using
 salmon v0.14.1. This quantification step took place in 2019.
 
 In order to provide more updated details on quantification, we provide the following
-details in the appendex. The following updated details on quantification was contributed 
+details in the appendix. The following updated details on quantification was contributed 
 by Vince Carey in 2026, and makes use of new tools as well as GENCODE v49.
 
 ### Downloading FASTQ files
