@@ -1964,9 +1964,20 @@ corner), but then have slight differences for the mutant strain
 
 <a id="ref"></a>
 
-# Appendix: Some operational details
+# Appendix
 
-## Acquiring the airway FASTQ files
+## Updated details on quantification
+
+The above workflow describes the quantification steps that led to the creation
+of the `gse` and `se` objects in the *airway* package. This involved mapping
+RNA-seq reads to the human reference transcripts in GENCODE v29, using
+salmon v0.14.1. This quantification step took place in 2019.
+
+In order to provide more updated details on quantification, we provide the following
+details in the appendex. The following updated details on quantification was contributed 
+by Vince Carey in 2026, and makes use of new tools as well as GENCODE v49.
+
+### Downloading FASTQ files
 
 The recommended methods for getting access to raw data for preprocessing and analysis
 change over time.  As of April 13, 2026, NCBI provides `fasterq-dump` for
@@ -1985,7 +1996,7 @@ gzip SRR1039509_2.fastq
 Once this is carried out for the 8 airway experiment samples, approximately 22GB of
 compressed FASTQ will be present.
 
-## Building the transcript index for salmon
+### Building the salmon index
 
 We used 
 ```
@@ -2023,7 +2034,7 @@ gencode.v49_salmon_1.11.4
 └── versionInfo.json
 ```
 
-## Producing transcript quantifications
+### Quantifying abundance with salmon
 
 The snakemake command was run with option `-j 4` on an M4 macbook air with
 32 GB RAM and completed in one hour.
@@ -2054,7 +2065,7 @@ quants
 ```
 The total disk space for quantifications for 8 samples was approximately 8 GB.
 
-## Producing a RangedSummarizedExperiment with tximeta
+### Producing a RangedSummarizedExperiment with tximeta
 
 With Gencode v49, `tximeta` applied to quantifications
 for the 8 samples produces messages including:
@@ -2084,9 +2095,11 @@ To keep these txps, and to skip adding ranges, use skipMeta=TRUE
 
 Example missing txps: [ENST00000707233.1, ENST00000710274.1, ENST00000707308.1, ...]
 ```
-I note that the FTP query failed on first attempt with a 421 "service not
-available" error.  The second attempt, after a few minutes, succeeded.
 
+Depending on your connection to the internet, some of the FTP queries that 
+`tximeta` performs on behalf of the user may fail. 
+Look for 421 "service not available" errors, and if seen, 
+re-attempt after improving your connection.
 
 # Session information
 
